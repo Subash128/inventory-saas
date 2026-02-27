@@ -9,7 +9,7 @@ const Login = () => {
     e.preventDefault();
 
     const { data } = await axios.post(
-      "http://localhost:5000/api/auth/login",
+      "https://inventory-saas-production-c345.up.railway.app/api/auth/login",
       { email, password }
     );
 

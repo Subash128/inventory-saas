@@ -12,7 +12,7 @@ const Dashboard = () => {
   const [totalQuantity, setTotalQuantity] = useState(0);
 
   const fetchData = async () => {
-    const res = await axios.get("http://localhost:5000/api/inventory");
+    const res = await axios.get("https://inventory-saas-production-c345.up.railway.app/api/inventory");
     const inventories = res.data.data;
 
     setData(inventories);
