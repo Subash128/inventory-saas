@@ -22,13 +22,23 @@ const app = express();
 // Middleware
 
 app.use(express.json());
-//app.use(cors());
+const allowedOrigins = [
+  "http://localhost:5173",
+  "https://jhi-inventory.vercel.app",
+];
+
 app.use(
   cors({
-    origin: [
-      
-      "https://inventory-saas-eight.vercel.app/"
-    ],
+    origin: function (origin, callback) {
+      if (!origin) return callback(null, true);
+
+      if (allowedOrigins.indexOf(origin) === -1) {
+        const msg = "CORS policy does not allow this origin.";
+        return callback(new Error(msg), false);
+      }
+
+      return callback(null, true);
+    },
     credentials: true,
   })
 );
