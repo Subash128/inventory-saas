@@ -1,15 +1,23 @@
+import { useState } from "react";
 import Sidebar from "./Sidebar";
 import Navbar from "./Navbar";
 
 const AdminLayout = ({ children }) => {
+  const [sidebarOpen, setSidebarOpen] = useState(true);
+
+  const toggleSidebar = () => setSidebarOpen((prev) => !prev);
+
   return (
-    <div className="flex">
-      <Sidebar />
+    <div className="min-h-screen bg-dark-950">
+      <Sidebar isOpen={sidebarOpen} onToggle={toggleSidebar} />
 
-      <div className="ml-64 flex-1 bg-gray-100 min-h-screen">
-        <Navbar />
+      <div
+        className={`transition-all duration-300 min-h-screen ${sidebarOpen ? "lg:ml-[260px]" : "lg:ml-[72px]"
+          }`}
+      >
+        <Navbar onToggleSidebar={toggleSidebar} />
 
-        <div className="p-6">{children}</div>
+        <main className="p-4 lg:p-6">{children}</main>
       </div>
     </div>
   );

@@ -4,6 +4,7 @@ import {
   getInventories,
   updateInventory,
   deleteInventory,
+  getUserInventory,
 } from "../controllers/inventoryController.js";
 
 import { protect } from "../middleware/authMiddleware.js";
@@ -15,8 +16,11 @@ const router = express.Router();
 // USER + ADMIN can create
 router.post("/", protect, upload.single("image"), createInventory);
 
-// USER + ADMIN can update (ownership check inside controller)
+// USER + ADMIN can update
 router.put("/:id", protect, upload.single("image"), updateInventory);
+
+// User's own entries
+router.get("/my", protect, getUserInventory);
 
 // ADMIN ONLY
 router.get("/", protect, adminOnly, getInventories);

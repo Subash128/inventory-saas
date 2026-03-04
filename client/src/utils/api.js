@@ -1,7 +1,7 @@
 import axios from "axios";
 
 const API = axios.create({
-  baseURL: "https://inventory-saas-production-c345.up.railway.app/",
+  baseURL: import.meta.env.VITE_API_URL || "http://localhost:5000",
 });
 
 API.interceptors.request.use((req) => {
@@ -11,5 +11,16 @@ API.interceptors.request.use((req) => {
   }
   return req;
 });
+
+API.interceptors.response.use(
+  (res) => res,
+  (err) => {
+    if (err.response?.status === 401) {
+      localStorage.clear();
+      window.location.href = "/login";
+    }
+    return Promise.reject(err);
+  }
+);
 
 export default API;

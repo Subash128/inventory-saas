@@ -72,9 +72,9 @@ export const getInventories = async (req, res) => {
 
     let query = {};
 
-    // Search by name (case insensitive)
+    // Search by item name (case insensitive)
     if (search) {
-      query.name = { $regex: search, $options: "i" };
+      query.itemName = { $regex: search, $options: "i" };
     }
 
     // Filter by stage
@@ -82,9 +82,9 @@ export const getInventories = async (req, res) => {
       query.stage = stage;
     }
 
-    // Filter by tag
+    // Filter by tag number
     if (tag) {
-      query.tag = tag;
+      query.tagNo = Number(tag);
     }
 
     // Date range filter
@@ -125,6 +125,30 @@ export const deleteInventory = async (req, res) => {
     }
 
     res.json({ message: "Item deleted successfully" });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// ➤ Get User's Own Inventory Entries
+export const getUserInventory = async (req, res) => {
+  try {
+    const { page = 1, limit = 20 } = req.query;
+    const skip = (page - 1) * limit;
+
+    const items = await Inventory.find({ createdBy: req.user._id })
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(Number(limit));
+
+    const total = await Inventory.countDocuments({ createdBy: req.user._id });
+
+    res.json({
+      total,
+      page: Number(page),
+      pages: Math.ceil(total / limit),
+      data: items,
+    });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
