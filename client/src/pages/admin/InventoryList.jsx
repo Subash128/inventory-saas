@@ -13,15 +13,7 @@ const STAGES = [
   "WIP", "Rejection", "Hold", "Waiting for Inspection",
 ];
 
-const LOCATIONS = [
-  "Melting",
-  "PDC Fettling Bay-1 (25001 Back Side)",
-  "PDC Fettling Bay-2 (14001 Back Side)",
-  "MC Shop Bay 2 (Old Machine Shop Bay)",
-  "MC Shop Bay 1 (New Machine Shop Bay)",
-  "Quality - PDC",
-  "Quality - MC Shop",
-];
+const TAG_OPTIONS = [100, 201, 401, 601, 801, 1000, 2000];
 
 const stageBadgeColors = {
   Raw: "bg-slate-500/20 text-slate-400",
@@ -40,7 +32,7 @@ const InventoryList = () => {
   const [page, setPage] = useState(1);
   const [pages, setPages] = useState(1);
   const [loading, setLoading] = useState(true);
-  const [filters, setFilters] = useState({ search: "", stage: "", tag: "", locationName: "" });
+  const [filters, setFilters] = useState({ search: "", stage: "", tag: "" });
   const [showAddModal, setShowAddModal] = useState(false);
   const [editItem, setEditItem] = useState(null);
   const [deleteId, setDeleteId] = useState(null);
@@ -54,7 +46,6 @@ const InventoryList = () => {
       if (filters.search) params.search = filters.search;
       if (filters.stage) params.stage = filters.stage;
       if (filters.tag) params.tag = filters.tag;
-      if (filters.locationName) params.locationName = filters.locationName;
 
       const { data } = await API.get("/api/inventory", { params });
       setItems(data.data);
@@ -189,23 +180,14 @@ const InventoryList = () => {
             ))}
           </select>
 
-          <input
-            type="text"
-            placeholder="Tag No"
+          <select
             value={filters.tag}
             onChange={(e) => setFilters({ ...filters, tag: e.target.value })}
-            onKeyDown={(e) => e.key === "Enter" && handleSearch()}
-            className="w-24 px-4 py-2.5 rounded-xl bg-dark-800/60 border border-dark-700/50 text-white placeholder-dark-500 focus:outline-none focus:border-brand-500/50 text-sm"
-          />
-
-          <select
-            value={filters.locationName}
-            onChange={(e) => setFilters({ ...filters, locationName: e.target.value })}
-            className="px-4 py-2.5 rounded-xl bg-dark-800/60 border border-dark-700/50 text-white text-sm focus:outline-none focus:border-brand-500/50 max-w-[200px]"
+            className="px-4 py-2.5 rounded-xl bg-dark-800/60 border border-dark-700/50 text-white text-sm focus:outline-none focus:border-brand-500/50"
           >
-            <option value="">All Locations</option>
-            {LOCATIONS.map((loc) => (
-              <option key={loc} value={loc}>{loc}</option>
+            <option value="">All Tags</option>
+            {TAG_OPTIONS.map((t) => (
+              <option key={t} value={t}>Tag {t}</option>
             ))}
           </select>
 
@@ -230,6 +212,7 @@ const InventoryList = () => {
                 <th>Item Name</th>
                 <th>Stage</th>
                 <th>Qty</th>
+                <th>Tons</th>
                 <th>Date</th>
                 <th>Actions</th>
               </tr>
@@ -283,6 +266,7 @@ const InventoryList = () => {
                       </span>
                     </td>
                     <td className="font-semibold">{item.quantity}</td>
+                    <td>{item.tons}</td>
                     <td className="text-xs text-dark-500">
                       {new Date(item.createdAt).toLocaleDateString("en-IN")}
                     </td>
