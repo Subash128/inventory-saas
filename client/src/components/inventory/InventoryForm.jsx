@@ -30,7 +30,6 @@ const InventoryForm = ({ onSubmit, initialData = null, loading = false }) => {
         itemName: "",
         stage: "",
         quantity: "",
-        tons: "",
     });
     const [imageFile, setImageFile] = useState(null);
     const [imagePreview, setImagePreview] = useState(null);
@@ -43,7 +42,6 @@ const InventoryForm = ({ onSubmit, initialData = null, loading = false }) => {
                 itemName: initialData.itemName || "",
                 stage: initialData.stage || "",
                 quantity: initialData.quantity || "",
-                tons: initialData.tons || "",
             });
             if (initialData.imageUrl) {
                 setImagePreview(initialData.imageUrl);
@@ -85,7 +83,6 @@ const InventoryForm = ({ onSubmit, initialData = null, loading = false }) => {
         formData.append("itemName", form.itemName);
         formData.append("stage", form.stage);
         formData.append("quantity", form.quantity);
-        formData.append("tons", form.tons);
         if (imageFile) {
             formData.append("image", imageFile);
         }
@@ -163,35 +160,19 @@ const InventoryForm = ({ onSubmit, initialData = null, loading = false }) => {
                 </select>
             </div>
 
-            {/* Quantity & Tons */}
-            <div className="grid grid-cols-2 gap-4">
-                <div>
-                    <label className={labelClass}>Quantity *</label>
-                    <input
-                        type="number"
-                        name="quantity"
-                        value={form.quantity}
-                        onChange={handleChange}
-                        required
-                        min="0"
-                        placeholder="0"
-                        className={inputClass}
-                    />
-                </div>
-                <div>
-                    <label className={labelClass}>Tons *</label>
-                    <input
-                        type="number"
-                        name="tons"
-                        value={form.tons}
-                        onChange={handleChange}
-                        required
-                        min="0"
-                        step="0.01"
-                        placeholder="0.00"
-                        className={inputClass}
-                    />
-                </div>
+            {/* Quantity */}
+            <div>
+                <label className={labelClass}>Quantity *</label>
+                <input
+                    type="number"
+                    name="quantity"
+                    value={form.quantity}
+                    onChange={handleChange}
+                    required
+                    min="0"
+                    placeholder="0"
+                    className={inputClass}
+                />
             </div>
 
             {/* Image Upload */}
