@@ -26,7 +26,7 @@ const TAG_NAMES = {
 
 const Dashboard = () => {
   const [summary, setSummary] = useState({
-    totalItems: 0, totalQuantity: 0, rejectionCount: 0,
+    totalItems: 0, totalQuantity: 0, totalTons: 0, rejectionCount: 0,
   });
   const [stageData, setStageData] = useState([]);
   const [tagData, setTagData] = useState([]);
@@ -61,6 +61,7 @@ const Dashboard = () => {
           name: TAG_NAMES[d._id] || `Tag ${d._id}`,
           tagNo: d._id,
           qty: d.totalQuantity,
+          tons: d.totalTons,
         }))
       );
 
@@ -69,6 +70,7 @@ const Dashboard = () => {
         monthlyRes.data.map((d) => ({
           name: `${months[d._id.month - 1]} ${d._id.year}`,
           qty: d.totalQuantity,
+          tons: d.totalTons,
         }))
       );
     } catch (err) {
@@ -92,6 +94,14 @@ const Dashboard = () => {
       icon: Package,
       gradient: "gradient-info",
       glow: "",
+    },
+    {
+      title: "Total Tons",
+      value: summary.totalTons,
+      icon: Weight,
+      gradient: "gradient-success",
+      glow: "glow-success",
+      decimals: 2,
     },
     {
       title: "Rejections",
@@ -232,6 +242,7 @@ const Dashboard = () => {
                   }}
                 />
                 <Bar dataKey="qty" fill="#6366f1" radius={[6, 6, 0, 0]} name="Quantity" />
+                <Bar dataKey="tons" fill="#8b5cf6" radius={[6, 6, 0, 0]} name="Tons" />
               </BarChart>
             </ResponsiveContainer>
           ) : (
@@ -280,6 +291,14 @@ const Dashboard = () => {
                 strokeWidth={2}
                 dot={{ fill: "#6366f1", strokeWidth: 0, r: 4 }}
                 name="Quantity"
+              />
+              <Line
+                type="monotone"
+                dataKey="tons"
+                stroke="#10b981"
+                strokeWidth={2}
+                dot={{ fill: "#10b981", strokeWidth: 0, r: 4 }}
+                name="Tons"
               />
             </LineChart>
           </ResponsiveContainer>
