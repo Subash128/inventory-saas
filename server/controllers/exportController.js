@@ -17,6 +17,7 @@ export const exportExcel = async (req, res) => {
       { header: "Item Name", key: "itemName", width: 25 },
       { header: "Stage", key: "stage", width: 22 },
       { header: "Quantity", key: "quantity", width: 12 },
+      { header: "Tons", key: "tons", width: 12 },
       { header: "Added By", key: "createdBy", width: 18 },
       { header: "Date", key: "createdAt", width: 20 },
     ];
@@ -37,6 +38,7 @@ export const exportExcel = async (req, res) => {
         itemName: item.itemName,
         stage: item.stage,
         quantity: item.quantity,
+        tons: item.tons,
         createdBy: item.createdBy?.name || "N/A",
         createdAt: item.createdAt?.toLocaleDateString("en-IN"),
       });
@@ -44,6 +46,7 @@ export const exportExcel = async (req, res) => {
 
     // Summary row
     const totalQty = items.reduce((acc, i) => acc + (i.quantity || 0), 0);
+    const totalTons = items.reduce((acc, i) => acc + (i.tons || 0), 0);
 
     worksheet.addRow({});
     const summaryRow = worksheet.addRow({
@@ -52,6 +55,7 @@ export const exportExcel = async (req, res) => {
       itemName: "TOTAL",
       stage: "",
       quantity: totalQty,
+      tons: totalTons,
       createdBy: "",
       createdAt: "",
     });
@@ -104,7 +108,7 @@ export const exportPDF = async (req, res) => {
     // Table header
     doc.fontSize(9).font("Helvetica-Bold");
     doc.text(
-      "Tag No   | Location              | Item Name             | Stage                 | Qty",
+      "Tag No   | Location              | Item Name             | Stage                 | Qty    | Tons",
       { width: 520 }
     );
     doc.moveDown(0.3);
@@ -117,13 +121,14 @@ export const exportPDF = async (req, res) => {
     // Table rows
     doc.font("Helvetica").fontSize(8);
     items.forEach((item) => {
-      const line = `${String(item.tagNo).padEnd(9)}| ${(item.locationName || "").padEnd(22)}| ${(item.itemName || "").padEnd(22)}| ${(item.stage || "").padEnd(22)}| ${String(item.quantity || 0).padEnd(7)}`;
+      const line = `${String(item.tagNo).padEnd(9)}| ${(item.locationName || "").padEnd(22)}| ${(item.itemName || "").padEnd(22)}| ${(item.stage || "").padEnd(22)}| ${String(item.quantity || 0).padEnd(7)}| ${item.tons || 0}`;
       doc.text(line, { width: 520 });
       doc.moveDown(0.15);
     });
 
     // Summary
     const totalQty = items.reduce((acc, i) => acc + (i.quantity || 0), 0);
+    const totalTons = items.reduce((acc, i) => acc + (i.tons || 0), 0);
 
     doc.moveDown(0.5);
     doc
@@ -134,7 +139,7 @@ export const exportPDF = async (req, res) => {
     doc
       .font("Helvetica-Bold")
       .fontSize(10)
-      .text(`Total Items: ${items.length}  |  Total Qty: ${totalQty}`);
+      .text(`Total Items: ${items.length}  |  Total Qty: ${totalQty}  |  Total Tons: ${totalTons}`);
 
     doc.end();
   } catch (error) {
