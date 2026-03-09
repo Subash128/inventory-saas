@@ -10,7 +10,6 @@ export const getDashboardSummary = async (req, res) => {
         $group: {
           _id: null,
           totalQuantity: { $sum: "$quantity" },
-          totalTons: { $sum: "$tons" },
         },
       },
     ]);
@@ -22,7 +21,6 @@ export const getDashboardSummary = async (req, res) => {
     res.json({
       totalItems,
       totalQuantity: totals[0]?.totalQuantity || 0,
-      totalTons: totals[0]?.totalTons || 0,
       rejectionCount,
     });
   } catch (error) {
@@ -38,7 +36,6 @@ export const getStageDistribution = async (req, res) => {
         $group: {
           _id: "$stage",
           totalQuantity: { $sum: "$quantity" },
-          totalTons: { $sum: "$tons" },
           count: { $sum: 1 },
         },
       },
@@ -59,7 +56,6 @@ export const getTagWiseStock = async (req, res) => {
           _id: "$tagNo",
           locationName: { $first: "$locationName" },
           totalQuantity: { $sum: "$quantity" },
-          totalTons: { $sum: "$tons" },
           count: { $sum: 1 },
         },
       },
@@ -83,7 +79,6 @@ export const getMonthlyGrowth = async (req, res) => {
             month: { $month: "$createdAt" },
           },
           totalQuantity: { $sum: "$quantity" },
-          totalTons: { $sum: "$tons" },
           count: { $sum: 1 },
         },
       },
@@ -123,7 +118,6 @@ export const getMonthlyReport = async (req, res) => {
             stage: "$stage",
           },
           totalQuantity: { $sum: "$quantity" },
-          totalTons: { $sum: "$tons" },
           count: { $sum: 1 },
         },
       },
@@ -147,7 +141,6 @@ export const getMonthlyReport = async (req, res) => {
         $group: {
           _id: null,
           totalQuantity: { $sum: "$quantity" },
-          totalTons: { $sum: "$tons" },
           totalItems: { $sum: 1 },
         },
       },
@@ -162,10 +155,9 @@ export const getMonthlyReport = async (req, res) => {
         itemName: d._id.itemName,
         stage: d._id.stage,
         totalQuantity: d.totalQuantity,
-        totalTons: d.totalTons,
         count: d.count,
       })),
-      summary: totals[0] || { totalQuantity: 0, totalTons: 0, totalItems: 0 },
+      summary: totals[0] || { totalQuantity: 0, totalItems: 0 },
     });
   } catch (error) {
     res.status(500).json({ message: error.message });
