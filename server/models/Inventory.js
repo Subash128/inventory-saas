@@ -32,10 +32,6 @@ const inventorySchema = new mongoose.Schema(
       type: Number,
       required: true,
     },
-    tons: {
-      type: Number,
-      required: true,
-    },
     imageUrl: {
       type: String,
     },
