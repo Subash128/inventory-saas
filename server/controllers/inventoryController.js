@@ -87,10 +87,6 @@ export const getInventories = async (req, res) => {
       query.tagNo = Number(tag);
     }
 
-    if (req.query.locationName) {
-      query.locationName = req.query.locationName;
-    }
-
     // Date range filter
     if (startDate && endDate) {
       query.createdAt = {
