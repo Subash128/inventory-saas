@@ -109,7 +109,6 @@ const UserInventory = () => {
                                 <th>Item Name</th>
                                 <th>Stage</th>
                                 <th>Qty</th>
-                                <th>Tons</th>
                                 <th>Date</th>
                                 <th>Action</th>
                             </tr>
@@ -169,7 +168,6 @@ const UserInventory = () => {
                                             </span>
                                         </td>
                                         <td className="font-semibold">{item.quantity}</td>
-                                        <td>{item.tons}</td>
                                         <td className="text-xs text-dark-500">
                                             {new Date(item.createdAt).toLocaleDateString("en-IN")}
                                         </td>
