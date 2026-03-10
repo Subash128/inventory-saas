@@ -1,15 +1,21 @@
 import { useState, useEffect } from "react";
 import { Upload, X, Image as ImageIcon } from "lucide-react";
 
-// Tag number → Location mapping
-const TAG_MAP = {
-    100: "Melting",
-    201: "PDC Fettling Bay-1 (25001 Back Side)",
-    401: "PDC Fettling Bay-2 (14001 Back Side)",
-    601: "MC Shop Bay 2 (Old Machine Shop Bay)",
-    801: "MC Shop Bay 1 (New Machine Shop Bay)",
-    1000: "Quality - PDC",
-    2000: "Quality - MC Shop",
+const TAG_RANGES = [
+    { min: 100,  max: 200,  location: "Melting" },
+    { min: 201,  max: 400,  location: "PDC Fettling Bay-1 (25001 Back Side)" },
+    { min: 401,  max: 600,  location: "PDC Fettling Bay-2 (14001 Back Side)" },
+    { min: 601,  max: 800,  location: "MC Shop Bay 2 (Old Machine Shop Bay)" },
+    { min: 801,  max: 999,  location: "MC Shop Bay 1 (New Machine Shop Bay)" },
+    { min: 1000, max: 1999, location: "Quality - PDC" },
+    { min: 2000, max: 9999, location: "Quality - MC Shop" },
+];
+
+const getLocationByTag = (tagNo) => {
+    const num = parseInt(tagNo);
+    if (isNaN(num)) return "";
+    const match = TAG_RANGES.find((r) => num >= r.min && num <= r.max);
+    return match ? match.location : "";
 };
 
 const STAGES = [
@@ -30,7 +36,6 @@ const InventoryForm = ({ onSubmit, initialData = null, loading = false }) => {
         itemName: "",
         stage: "",
         quantity: "",
-        tons: "",
     });
     const [imageFile, setImageFile] = useState(null);
     const [imagePreview, setImagePreview] = useState(null);
@@ -43,7 +48,6 @@ const InventoryForm = ({ onSubmit, initialData = null, loading = false }) => {
                 itemName: initialData.itemName || "",
                 stage: initialData.stage || "",
                 quantity: initialData.quantity || "",
-                tons: initialData.tons || "",
             });
             if (initialData.imageUrl) {
                 setImagePreview(initialData.imageUrl);
@@ -56,7 +60,7 @@ const InventoryForm = ({ onSubmit, initialData = null, loading = false }) => {
         setForm({
             ...form,
             tagNo,
-            locationName: TAG_MAP[tagNo] || "",
+            locationName: getLocationByTag(tagNo),
         });
     };
 
@@ -85,7 +89,6 @@ const InventoryForm = ({ onSubmit, initialData = null, loading = false }) => {
         formData.append("itemName", form.itemName);
         formData.append("stage", form.stage);
         formData.append("quantity", form.quantity);
-        formData.append("tons", form.tons);
         if (imageFile) {
             formData.append("image", imageFile);
         }
@@ -96,36 +99,46 @@ const InventoryForm = ({ onSubmit, initialData = null, loading = false }) => {
         "w-full px-4 py-2.5 rounded-xl bg-dark-800/60 border border-dark-700/50 text-white placeholder-dark-500 focus:outline-none focus:border-brand-500/50 focus:ring-1 focus:ring-brand-500/30 transition-all text-sm";
     const labelClass = "block text-sm font-medium text-dark-300 mb-1.5";
 
+    const locationFound = form.tagNo && getLocationByTag(form.tagNo);
+    const locationUnknown = form.tagNo && !getLocationByTag(form.tagNo);
+
     return (
         <form onSubmit={handleSubmit} className="space-y-4">
             {/* Tag Number & Location */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                     <label className={labelClass}>Tag Number *</label>
-                    <select
+                    <input
+                        type="number"
                         name="tagNo"
                         value={form.tagNo}
                         onChange={handleTagChange}
                         required
+                        min="0"
+                        placeholder="Enter tag number"
                         className={inputClass}
-                    >
-                        <option value="">Select Tag</option>
-                        {Object.entries(TAG_MAP).map(([tag, loc]) => (
-                            <option key={tag} value={tag}>
-                                {tag} - {loc}
-                            </option>
-                        ))}
-                    </select>
+                    />
+                    {locationFound && (
+                        <p className="mt-1 text-xs text-brand-400">
+                            ✓ Location auto-filled
+                        </p>
+                    )}
+                    {locationUnknown && (
+                        <p className="mt-1 text-xs text-red-400">
+                            ⚠ Unknown tag — enter location manually
+                        </p>
+                    )}
                 </div>
 
                 <div>
                     <label className={labelClass}>Location</label>
                     <input
                         type="text"
+                        name="locationName"
                         value={form.locationName}
-                        readOnly
-                        className={`${inputClass} opacity-60 cursor-not-allowed`}
-                        placeholder="Auto-filled from Tag"
+                        onChange={handleChange}
+                        className={inputClass}
+                        placeholder="Auto-filled or enter manually"
                     />
                 </div>
             </div>
@@ -163,35 +176,19 @@ const InventoryForm = ({ onSubmit, initialData = null, loading = false }) => {
                 </select>
             </div>
 
-            {/* Quantity & Tons */}
-            <div className="grid grid-cols-2 gap-4">
-                <div>
-                    <label className={labelClass}>Quantity *</label>
-                    <input
-                        type="number"
-                        name="quantity"
-                        value={form.quantity}
-                        onChange={handleChange}
-                        required
-                        min="0"
-                        placeholder="0"
-                        className={inputClass}
-                    />
-                </div>
-                <div>
-                    <label className={labelClass}>Tons *</label>
-                    <input
-                        type="number"
-                        name="tons"
-                        value={form.tons}
-                        onChange={handleChange}
-                        required
-                        min="0"
-                        step="0.01"
-                        placeholder="0.00"
-                        className={inputClass}
-                    />
-                </div>
+            {/* Quantity */}
+            <div>
+                <label className={labelClass}>Quantity *</label>
+                <input
+                    type="number"
+                    name="quantity"
+                    value={form.quantity}
+                    onChange={handleChange}
+                    required
+                    min="0"
+                    placeholder="0"
+                    className={inputClass}
+                />
             </div>
 
             {/* Image Upload */}
@@ -234,8 +231,8 @@ const InventoryForm = ({ onSubmit, initialData = null, loading = false }) => {
                 type="submit"
                 disabled={loading}
                 className="w-full py-3 rounded-xl gradient-brand text-white font-semibold
-          hover:shadow-lg hover:shadow-brand-500/25 transition-all
-          disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                    hover:shadow-lg hover:shadow-brand-500/25 transition-all
+                    disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
                 {loading ? (
                     <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
