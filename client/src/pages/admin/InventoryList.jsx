@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Plus, Search, Filter, Trash2, Edit3, Image as ImageIcon,
-  ChevronLeft, ChevronRight, FileSpreadsheet, FileText, Download, X,
+  ChevronLeft, ChevronRight, FileSpreadsheet, FileText, X,
 } from "lucide-react";
 import API from "../../utils/api";
 import Modal from "../../components/ui/Modal";
@@ -13,7 +13,16 @@ const STAGES = [
   "WIP", "Rejection", "Hold", "Waiting for Inspection",
 ];
 
-const TAG_OPTIONS = [100, 201, 401, 601, 801, 1000, 2000];
+// Same ranges as InventoryForm
+const TAG_RANGES = [
+  { min: 100,  max: 200,  label: "100–200",  location: "Melting" },
+  { min: 201,  max: 400,  label: "201–400",  location: "PDC Fettling Bay-1 (25001 Back Side)" },
+  { min: 401,  max: 600,  label: "401–600",  location: "PDC Fettling Bay-2 (14001 Back Side)" },
+  { min: 601,  max: 800,  label: "601–800",  location: "MC Shop Bay 2 (Old Machine Shop Bay)" },
+  { min: 801,  max: 999,  label: "801–999",  location: "MC Shop Bay 1 (New Machine Shop Bay)" },
+  { min: 1000, max: 1999, label: "1000–1999",location: "Quality - PDC" },
+  { min: 2000, max: 9999, label: "2000+",    location: "Quality - MC Shop" },
+];
 
 const stageBadgeColors = {
   Raw: "bg-slate-500/20 text-slate-400",
@@ -32,7 +41,7 @@ const InventoryList = () => {
   const [page, setPage] = useState(1);
   const [pages, setPages] = useState(1);
   const [loading, setLoading] = useState(true);
-  const [filters, setFilters] = useState({ search: "", stage: "", tag: "" });
+  const [filters, setFilters] = useState({ search: "", stage: "", tagMin: "", tagMax: "" });
   const [showAddModal, setShowAddModal] = useState(false);
   const [editItem, setEditItem] = useState(null);
   const [deleteId, setDeleteId] = useState(null);
@@ -43,9 +52,10 @@ const InventoryList = () => {
     setLoading(true);
     try {
       const params = { page: p, limit: 15 };
-      if (filters.search) params.search = filters.search;
-      if (filters.stage) params.stage = filters.stage;
-      if (filters.tag) params.tag = filters.tag;
+      if (filters.search)  params.search = filters.search;
+      if (filters.stage)   params.stage  = filters.stage;
+      if (filters.tagMin)  params.tagMin = filters.tagMin;
+      if (filters.tagMax)  params.tagMax = filters.tagMax;
 
       const { data } = await API.get("/api/inventory", { params });
       setItems(data.data);
@@ -64,6 +74,19 @@ const InventoryList = () => {
   }, []);
 
   const handleSearch = () => fetchData(1);
+
+  // When user picks a range from the dropdown, set tagMin & tagMax
+  const handleTagRangeChange = (e) => {
+    const val = e.target.value;
+    if (!val) {
+      setFilters({ ...filters, tagMin: "", tagMax: "" });
+    } else {
+      const range = TAG_RANGES.find((r) => r.label === val);
+      if (range) {
+        setFilters({ ...filters, tagMin: range.min, tagMax: range.max });
+      }
+    }
+  };
 
   const handleAdd = async (formData) => {
     setSubmitLoading(true);
@@ -111,6 +134,12 @@ const InventoryList = () => {
     window.open(`${baseURL}/api/export/${type}?token=${token}`, "_blank");
   };
 
+  // Derive selected range label for controlled select
+  const selectedRangeLabel =
+    TAG_RANGES.find(
+      (r) => r.min === Number(filters.tagMin) && r.max === Number(filters.tagMax)
+    )?.label || "";
+
   return (
     <div className="space-y-4">
       {/* Header */}
@@ -152,23 +181,20 @@ const InventoryList = () => {
       {/* Filters */}
       <div className="glass-card rounded-2xl p-4">
         <div className="flex flex-col md:flex-row gap-3">
+          {/* Search */}
           <div className="flex-1 relative">
-            <Search
-              size={16}
-              className="absolute left-3 top-1/2 -translate-y-1/2 text-dark-500"
-            />
+            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-dark-500" />
             <input
               type="text"
               placeholder="Search by item name..."
               value={filters.search}
-              onChange={(e) =>
-                setFilters({ ...filters, search: e.target.value })
-              }
+              onChange={(e) => setFilters({ ...filters, search: e.target.value })}
               onKeyDown={(e) => e.key === "Enter" && handleSearch()}
               className="w-full pl-9 pr-4 py-2.5 rounded-xl bg-dark-800/60 border border-dark-700/50 text-white placeholder-dark-500 focus:outline-none focus:border-brand-500/50 text-sm"
             />
           </div>
 
+          {/* Stage Filter */}
           <select
             value={filters.stage}
             onChange={(e) => setFilters({ ...filters, stage: e.target.value })}
@@ -180,20 +206,23 @@ const InventoryList = () => {
             ))}
           </select>
 
+          {/* Tag Range Filter — now shows location ranges */}
           <select
-            value={filters.tag}
-            onChange={(e) => setFilters({ ...filters, tag: e.target.value })}
+            value={selectedRangeLabel}
+            onChange={handleTagRangeChange}
             className="px-4 py-2.5 rounded-xl bg-dark-800/60 border border-dark-700/50 text-white text-sm focus:outline-none focus:border-brand-500/50"
           >
-            <option value="">All Tags</option>
-            {TAG_OPTIONS.map((t) => (
-              <option key={t} value={t}>Tag {t}</option>
+            <option value="">All Locations</option>
+            {TAG_RANGES.map((r) => (
+              <option key={r.label} value={r.label}>
+                {r.label} — {r.location}
+              </option>
             ))}
           </select>
 
           <button
             onClick={handleSearch}
-            className="px-4 py-2.5 rounded-xl gradient-brand text-white text-sm font-medium"
+            className="px-4 py-2.5 rounded-xl gradient-brand text-white text-sm font-medium flex items-center justify-center"
           >
             <Filter size={16} />
           </button>
@@ -212,7 +241,6 @@ const InventoryList = () => {
                 <th>Item Name</th>
                 <th>Stage</th>
                 <th>Qty</th>
-                {/* <th>Tons</th> */}
                 <th>Date</th>
                 <th>Actions</th>
               </tr>
@@ -220,13 +248,13 @@ const InventoryList = () => {
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan="9" className="text-center py-12">
+                  <td colSpan="8" className="text-center py-12">
                     <div className="w-6 h-6 border-2 border-brand-500/30 border-t-brand-500 rounded-full animate-spin mx-auto" />
                   </td>
                 </tr>
               ) : items.length === 0 ? (
                 <tr>
-                  <td colSpan="9" className="text-center py-12 text-dark-500">
+                  <td colSpan="8" className="text-center py-12 text-dark-500">
                     No inventory items found
                   </td>
                 </tr>
@@ -252,21 +280,15 @@ const InventoryList = () => {
                         </div>
                       )}
                     </td>
-                    <td className="font-mono text-brand-400 font-semibold">
-                      {item.tagNo}
-                    </td>
+                    <td className="font-mono text-brand-400 font-semibold">{item.tagNo}</td>
                     <td className="text-xs">{item.locationName}</td>
                     <td className="font-medium text-white">{item.itemName}</td>
                     <td>
-                      <span
-                        className={`stage-badge ${stageBadgeColors[item.stage] || "bg-dark-700 text-dark-300"
-                          }`}
-                      >
+                      <span className={`stage-badge ${stageBadgeColors[item.stage] || "bg-dark-700 text-dark-300"}`}>
                         {item.stage}
                       </span>
                     </td>
                     <td className="font-semibold">{item.quantity}</td>
-                    {/* <td>{item.tons}</td> */}
                     <td className="text-xs text-dark-500">
                       {new Date(item.createdAt).toLocaleDateString("en-IN")}
                     </td>
@@ -320,55 +342,29 @@ const InventoryList = () => {
       </div>
 
       {/* Add Modal */}
-      <Modal
-        isOpen={showAddModal}
-        onClose={() => setShowAddModal(false)}
-        title="Add Inventory Item"
-        size="lg"
-      >
+      <Modal isOpen={showAddModal} onClose={() => setShowAddModal(false)} title="Add Inventory Item" size="lg">
         <InventoryForm onSubmit={handleAdd} loading={submitLoading} />
       </Modal>
 
       {/* Edit Modal */}
-      <Modal
-        isOpen={!!editItem}
-        onClose={() => setEditItem(null)}
-        title="Edit Inventory Item"
-        size="lg"
-      >
-        <InventoryForm
-          onSubmit={handleEdit}
-          initialData={editItem}
-          loading={submitLoading}
-        />
+      <Modal isOpen={!!editItem} onClose={() => setEditItem(null)} title="Edit Inventory Item" size="lg">
+        <InventoryForm onSubmit={handleEdit} initialData={editItem} loading={submitLoading} />
       </Modal>
 
       {/* Delete Confirmation */}
-      <Modal
-        isOpen={!!deleteId}
-        onClose={() => setDeleteId(null)}
-        title="Delete Item"
-        size="sm"
-      >
+      <Modal isOpen={!!deleteId} onClose={() => setDeleteId(null)} title="Delete Item" size="sm">
         <div className="text-center">
           <div className="w-12 h-12 rounded-full bg-red-500/20 flex items-center justify-center mx-auto mb-4">
             <Trash2 size={24} className="text-red-400" />
           </div>
           <p className="text-dark-200 mb-6">
-            Are you sure you want to delete this item? This action cannot be
-            undone.
+            Are you sure you want to delete this item? This action cannot be undone.
           </p>
           <div className="flex gap-3 justify-center">
-            <button
-              onClick={() => setDeleteId(null)}
-              className="px-4 py-2 rounded-xl bg-dark-700 text-dark-200 hover:bg-dark-600 transition-all"
-            >
+            <button onClick={() => setDeleteId(null)} className="px-4 py-2 rounded-xl bg-dark-700 text-dark-200 hover:bg-dark-600 transition-all">
               Cancel
             </button>
-            <button
-              onClick={handleDelete}
-              className="px-4 py-2 rounded-xl bg-red-600 text-white hover:bg-red-700 transition-all"
-            >
+            <button onClick={handleDelete} className="px-4 py-2 rounded-xl bg-red-600 text-white hover:bg-red-700 transition-all">
               Delete
             </button>
           </div>
