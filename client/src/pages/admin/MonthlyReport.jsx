@@ -126,7 +126,7 @@ const MonthlyReport = () => {
                             {report.summary?.totalQuantity || 0}
                         </h3>
                     </motion.div>
-                    <motion.div
+                    {/* <motion.div
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: 0.2 }}
@@ -136,7 +136,7 @@ const MonthlyReport = () => {
                         <h3 className="text-2xl font-bold text-white mt-1">
                             {(report.summary?.totalTons || 0).toFixed(2)}
                         </h3>
-                    </motion.div>
+                    </motion.div> */}
                 </div>
             )}
 
@@ -151,7 +151,7 @@ const MonthlyReport = () => {
                                 <th>Item Name</th>
                                 <th>Stage</th>
                                 <th>Quantity</th>
-                                <th>Tons</th>
+                                {/* <th>Tons</th> */}
                                 <th>Entries</th>
                             </tr>
                         </thead>
@@ -190,7 +190,7 @@ const MonthlyReport = () => {
                                             </span>
                                         </td>
                                         <td className="font-semibold">{item.totalQuantity}</td>
-                                        <td>{item.totalTons.toFixed(2)}</td>
+                                        {/* <td>{item.totalTons.toFixed(2)}</td> */}
                                         <td className="text-dark-500">{item.count}</td>
                                     </motion.tr>
                                 ))
