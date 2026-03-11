@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react";
-import { Upload, X, Image as ImageIcon } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
+import { Upload, X, Image as ImageIcon, Camera, RefreshCw } from "lucide-react";
 
 const TAG_RANGES = [
     { min: 100,  max: 200,  location: "Melting" },
@@ -19,14 +19,8 @@ const getLocationByTag = (tagNo) => {
 };
 
 const STAGES = [
-    "Raw",
-    "Fettled",
-    "FG",
-    "Waiting for Machining",
-    "WIP",
-    "Rejection",
-    "Hold",
-    "Waiting for Inspection",
+    "Raw", "Fettled", "FG", "Waiting for Machining",
+    "WIP", "Rejection", "Hold", "Waiting for Inspection",
 ];
 
 const InventoryForm = ({ onSubmit, initialData = null, loading = false }) => {
@@ -40,6 +34,14 @@ const InventoryForm = ({ onSubmit, initialData = null, loading = false }) => {
     const [imageFile, setImageFile] = useState(null);
     const [imagePreview, setImagePreview] = useState(null);
 
+    // Camera states
+    const [showCamera, setShowCamera] = useState(false);
+    const [cameraError, setCameraError] = useState("");
+    const [facingMode, setFacingMode] = useState("environment"); // rear camera default
+    const [stream, setStream] = useState(null);
+    const videoRef = useRef(null);
+    const canvasRef = useRef(null);
+
     useEffect(() => {
         if (initialData) {
             setForm({
@@ -49,19 +51,76 @@ const InventoryForm = ({ onSubmit, initialData = null, loading = false }) => {
                 stage: initialData.stage || "",
                 quantity: initialData.quantity || "",
             });
-            if (initialData.imageUrl) {
-                setImagePreview(initialData.imageUrl);
-            }
+            if (initialData.imageUrl) setImagePreview(initialData.imageUrl);
         }
     }, [initialData]);
 
+    // Start camera stream
+    const startCamera = async (facing = facingMode) => {
+        setCameraError("");
+        try {
+            if (stream) {
+                stream.getTracks().forEach((t) => t.stop());
+            }
+            const newStream = await navigator.mediaDevices.getUserMedia({
+                video: { facingMode: facing, width: { ideal: 1280 }, height: { ideal: 720 } },
+            });
+            setStream(newStream);
+            setShowCamera(true);
+            // Wait for videoRef to mount
+            setTimeout(() => {
+                if (videoRef.current) {
+                    videoRef.current.srcObject = newStream;
+                    videoRef.current.play();
+                }
+            }, 100);
+        } catch (err) {
+            setCameraError("Camera access denied. Please allow camera permission or use file upload.");
+            setShowCamera(false);
+        }
+    };
+
+    // Stop camera stream
+    const stopCamera = () => {
+        if (stream) stream.getTracks().forEach((t) => t.stop());
+        setStream(null);
+        setShowCamera(false);
+        setCameraError("");
+    };
+
+    // Flip camera
+    const flipCamera = () => {
+        const newFacing = facingMode === "environment" ? "user" : "environment";
+        setFacingMode(newFacing);
+        startCamera(newFacing);
+    };
+
+    // Capture photo from video
+    const capturePhoto = () => {
+        const video = videoRef.current;
+        const canvas = canvasRef.current;
+        if (!video || !canvas) return;
+
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        canvas.getContext("2d").drawImage(video, 0, 0);
+
+        canvas.toBlob((blob) => {
+            const file = new File([blob], `capture_${Date.now()}.jpg`, { type: "image/jpeg" });
+            setImageFile(file);
+            setImagePreview(URL.createObjectURL(blob));
+            stopCamera();
+        }, "image/jpeg", 0.92);
+    };
+
+    // Cleanup stream on unmount
+    useEffect(() => {
+        return () => { if (stream) stream.getTracks().forEach((t) => t.stop()); };
+    }, [stream]);
+
     const handleTagChange = (e) => {
         const tagNo = e.target.value;
-        setForm({
-            ...form,
-            tagNo,
-            locationName: getLocationByTag(tagNo),
-        });
+        setForm({ ...form, tagNo, locationName: getLocationByTag(tagNo) });
     };
 
     const handleChange = (e) => {
@@ -89,9 +148,7 @@ const InventoryForm = ({ onSubmit, initialData = null, loading = false }) => {
         formData.append("itemName", form.itemName);
         formData.append("stage", form.stage);
         formData.append("quantity", form.quantity);
-        if (imageFile) {
-            formData.append("image", imageFile);
-        }
+        if (imageFile) formData.append("image", imageFile);
         onSubmit(formData);
     };
 
@@ -119,17 +176,12 @@ const InventoryForm = ({ onSubmit, initialData = null, loading = false }) => {
                         className={inputClass}
                     />
                     {locationFound && (
-                        <p className="mt-1 text-xs text-brand-400">
-                            ✓ Location auto-filled
-                        </p>
+                        <p className="mt-1 text-xs text-brand-400">✓ Location auto-filled</p>
                     )}
                     {locationUnknown && (
-                        <p className="mt-1 text-xs text-red-400">
-                            ⚠ Unknown tag — enter location manually
-                        </p>
+                        <p className="mt-1 text-xs text-red-400">⚠ Unknown tag — enter location manually</p>
                     )}
                 </div>
-
                 <div>
                     <label className={labelClass}>Location</label>
                     <input
@@ -169,9 +221,7 @@ const InventoryForm = ({ onSubmit, initialData = null, loading = false }) => {
                 >
                     <option value="">Select Stage</option>
                     {STAGES.map((s) => (
-                        <option key={s} value={s}>
-                            {s}
-                        </option>
+                        <option key={s} value={s}>{s}</option>
                     ))}
                 </select>
             </div>
@@ -194,35 +244,106 @@ const InventoryForm = ({ onSubmit, initialData = null, loading = false }) => {
             {/* Image Upload */}
             <div>
                 <label className={labelClass}>Image (Optional)</label>
-                {imagePreview ? (
-                    <div className="relative inline-block">
-                        <img
-                            src={imagePreview}
-                            alt="Preview"
-                            className="w-32 h-32 object-cover rounded-xl border border-dark-700/50"
+
+                {/* Camera View */}
+                {showCamera && (
+                    <div className="relative rounded-xl overflow-hidden border border-dark-700/50 bg-black mb-3">
+                        <video
+                            ref={videoRef}
+                            autoPlay
+                            playsInline
+                            muted
+                            className="w-full max-h-64 object-cover"
                         />
+                        {/* Camera Controls */}
+                        <div className="absolute bottom-3 left-0 right-0 flex items-center justify-center gap-4">
+                            {/* Flip Camera */}
+                            <button
+                                type="button"
+                                onClick={flipCamera}
+                                className="p-2.5 rounded-full bg-dark-800/80 text-white hover:bg-dark-700 transition-all"
+                            >
+                                <RefreshCw size={18} />
+                            </button>
+                            {/* Capture */}
+                            <button
+                                type="button"
+                                onClick={capturePhoto}
+                                className="w-14 h-14 rounded-full bg-white border-4 border-dark-400 hover:bg-gray-100 transition-all shadow-lg"
+                            />
+                            {/* Close Camera */}
+                            <button
+                                type="button"
+                                onClick={stopCamera}
+                                className="p-2.5 rounded-full bg-dark-800/80 text-red-400 hover:bg-dark-700 transition-all"
+                            >
+                                <X size={18} />
+                            </button>
+                        </div>
+                        {/* Hidden canvas for capture */}
+                        <canvas ref={canvasRef} className="hidden" />
+                    </div>
+                )}
+
+                {/* Error */}
+                {cameraError && (
+                    <p className="text-xs text-red-400 mb-2">⚠ {cameraError}</p>
+                )}
+
+                {/* Preview */}
+                {imagePreview ? (
+                    <div className="flex items-center gap-3">
+                        <div className="relative inline-block">
+                            <img
+                                src={imagePreview}
+                                alt="Preview"
+                                className="w-32 h-32 object-cover rounded-xl border border-dark-700/50"
+                            />
+                            <button
+                                type="button"
+                                onClick={removeImage}
+                                className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-red-500 flex items-center justify-center text-white hover:bg-red-600 transition-colors"
+                            >
+                                <X size={14} />
+                            </button>
+                        </div>
+                        {/* Retake button */}
                         <button
                             type="button"
-                            onClick={removeImage}
-                            className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-red-500 flex items-center justify-center text-white hover:bg-red-600 transition-colors"
+                            onClick={() => { removeImage(); startCamera(); }}
+                            className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-dark-800/60 border border-dark-700/50 text-dark-300 hover:text-white hover:border-brand-500/40 transition-all text-sm"
                         >
-                            <X size={14} />
+                            <Camera size={15} />
+                            Retake
                         </button>
                     </div>
                 ) : (
-                    <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-dark-700/50 rounded-xl cursor-pointer hover:border-brand-500/40 hover:bg-dark-800/30 transition-all">
-                        <div className="flex flex-col items-center gap-2 text-dark-500">
-                            <Upload size={24} />
-                            <span className="text-sm">Click to upload image</span>
-                            <span className="text-xs">PNG, JPG up to 5MB</span>
+                    !showCamera && (
+                        <div className="grid grid-cols-2 gap-3">
+                            {/* Camera Button */}
+                            <button
+                                type="button"
+                                onClick={() => startCamera()}
+                                className="flex flex-col items-center justify-center h-28 rounded-xl border-2 border-dashed border-dark-700/50 hover:border-brand-500/40 hover:bg-dark-800/30 transition-all text-dark-500 hover:text-dark-300 gap-2"
+                            >
+                                <Camera size={24} />
+                                <span className="text-sm">Take Photo</span>
+                            </button>
+
+                            {/* File Upload Button */}
+                            <label className="flex flex-col items-center justify-center h-28 rounded-xl border-2 border-dashed border-dark-700/50 cursor-pointer hover:border-brand-500/40 hover:bg-dark-800/30 transition-all text-dark-500 hover:text-dark-300 gap-2">
+                                <Upload size={24} />
+                                <span className="text-sm">Upload File</span>
+                                <span className="text-xs">PNG, JPG up to 5MB</span>
+                                <input
+                                    type="file"
+                                    accept="image/*"
+                                    onChange={handleImageChange}
+                                    className="hidden"
+                                />
+                            </label>
                         </div>
-                        <input
-                            type="file"
-                            accept="image/*"
-                            onChange={handleImageChange}
-                            className="hidden"
-                        />
-                    </label>
+                    )
                 )}
             </div>
 
