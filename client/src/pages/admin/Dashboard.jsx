@@ -6,7 +6,7 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid,
   LineChart, Line,
 } from "recharts";
-import { Boxes, Package, Weight, AlertTriangle } from "lucide-react";
+import { Boxes, Package, AlertTriangle } from "lucide-react";
 import API from "../../utils/api";
 
 const STAGE_COLORS = [
@@ -14,14 +14,27 @@ const STAGE_COLORS = [
   "#10b981", "#f59e0b", "#ef4444", "#ec4899",
 ];
 
-const TAG_NAMES = {
-  100: "Melting",
-  201: "PDC Fettling-1",
-  401: "PDC Fettling-2",
-  601: "MC Shop Bay 2",
-  801: "MC Shop Bay 1",
-  1000: "Quality PDC",
-  2000: "Quality MC",
+const LOCATION_COLORS = [
+  "#6366f1", "#8b5cf6", "#06b6d4", "#10b981",
+  "#f59e0b", "#ef4444", "#ec4899",
+];
+
+// Range → short location label for chart display
+const TAG_RANGES = [
+  { min: 100,  max: 200,  location: "Melting" },
+  { min: 201,  max: 400,  location: "PDC Fettling-1" },
+  { min: 401,  max: 600,  location: "PDC Fettling-2" },
+  { min: 601,  max: 800,  location: "MC Shop Bay 2" },
+  { min: 801,  max: 999,  location: "MC Shop Bay 1" },
+  { min: 1000, max: 1999, location: "Quality PDC" },
+  { min: 2000, max: 9999, location: "Quality MC" },
+];
+
+// Map a tagNo to its location label
+const getLocationLabel = (tagNo) => {
+  const num = parseInt(tagNo);
+  const match = TAG_RANGES.find((r) => num >= r.min && num <= r.max);
+  return match ? match.location : `Tag ${tagNo}`;
 };
 
 const Dashboard = () => {
@@ -29,7 +42,7 @@ const Dashboard = () => {
     totalItems: 0, totalQuantity: 0, rejectionCount: 0,
   });
   const [stageData, setStageData] = useState([]);
-  const [tagData, setTagData] = useState([]);
+  const [locationData, setLocationData] = useState([]);
   const [monthlyData, setMonthlyData] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -56,21 +69,23 @@ const Dashboard = () => {
         }))
       );
 
-      setTagData(
-        tagRes.data.map((d) => ({
-          name: TAG_NAMES[d._id] || `Tag ${d._id}`,
-          tagNo: d._id,
-          qty: d.totalQuantity,
-          //tons: d.totalTons,
-        }))
-      );
+      // Group tag-stock data by location range
+      const locationMap = {};
+      tagRes.data.forEach((d) => {
+        const label = getLocationLabel(d._id);
+        if (!locationMap[label]) {
+          locationMap[label] = { name: label, qty: 0 };
+        }
+        locationMap[label].qty += d.totalQuantity;
+      });
+      setLocationData(Object.values(locationMap));
 
-      const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+      const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun",
+                      "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
       setMonthlyData(
         monthlyRes.data.map((d) => ({
           name: `${months[d._id.month - 1]} ${d._id.year}`,
           qty: d.totalQuantity,
-          //tons: d.totalTons,
         }))
       );
     } catch (err) {
@@ -95,14 +110,6 @@ const Dashboard = () => {
       gradient: "gradient-info",
       glow: "",
     },
-    // {
-    //   title: "Total Tons",
-    //   value: summary.totalTons,
-    //   icon: Weight,
-    //   gradient: "gradient-success",
-    //   glow: "glow-success",
-    //   decimals: 2,
-    // },
     {
       title: "Rejections",
       value: summary.rejectionCount,
@@ -130,27 +137,18 @@ const Dashboard = () => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: i * 0.1 }}
-            className={`glass-card rounded-2xl p-5 relative overflow-hidden group`}
+            className="glass-card rounded-2xl p-5 relative overflow-hidden group"
           >
-            {/* Gradient accent */}
             <div
               className={`absolute top-0 right-0 w-24 h-24 ${card.gradient} rounded-full -translate-y-8 translate-x-8 opacity-20 group-hover:opacity-30 transition-opacity`}
             />
-
             <div className="relative z-10">
-              <div
-                className={`w-10 h-10 rounded-xl ${card.gradient} flex items-center justify-center mb-3 ${card.glow}`}
-              >
+              <div className={`w-10 h-10 rounded-xl ${card.gradient} flex items-center justify-center mb-3 ${card.glow}`}>
                 <card.icon size={20} className="text-white" />
               </div>
               <p className="text-dark-400 text-sm font-medium">{card.title}</p>
               <h3 className="text-2xl font-bold text-white mt-1">
-                <CountUp
-                  end={card.value}
-                  duration={2}
-                  decimals={card.decimals || 0}
-                  separator=","
-                />
+                <CountUp end={card.value} duration={2} decimals={card.decimals || 0} separator="," />
               </h3>
             </div>
           </motion.div>
@@ -166,9 +164,7 @@ const Dashboard = () => {
           transition={{ delay: 0.4 }}
           className="glass-card rounded-2xl p-6"
         >
-          <h3 className="text-lg font-semibold text-white mb-4">
-            Stage Distribution
-          </h3>
+          <h3 className="text-lg font-semibold text-white mb-4">Stage Distribution</h3>
           {stageData.length > 0 ? (
             <ResponsiveContainer width="100%" height={300}>
               <PieChart>
@@ -195,9 +191,7 @@ const Dashboard = () => {
                     color: "#e2e8f0",
                   }}
                 />
-                <Legend
-                  wrapperStyle={{ fontSize: "12px", color: "#94a3b8" }}
-                />
+                <Legend wrapperStyle={{ fontSize: "12px", color: "#94a3b8" }} />
               </PieChart>
             </ResponsiveContainer>
           ) : (
@@ -207,19 +201,17 @@ const Dashboard = () => {
           )}
         </motion.div>
 
-        {/* Tag-wise Bar Chart */}
+        {/* Location-wise Stock Bar Chart */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.5 }}
           className="glass-card rounded-2xl p-6"
         >
-          <h3 className="text-lg font-semibold text-white mb-4">
-            Tag-wise Stock
-          </h3>
-          {tagData.length > 0 ? (
+          <h3 className="text-lg font-semibold text-white mb-4">Location-wise Stock</h3>
+          {locationData.length > 0 ? (
             <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={tagData}>
+              <BarChart data={locationData} margin={{ bottom: 20 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="rgba(148,163,184,0.1)" />
                 <XAxis
                   dataKey="name"
@@ -227,7 +219,8 @@ const Dashboard = () => {
                   axisLine={{ stroke: "rgba(148,163,184,0.1)" }}
                   angle={-20}
                   textAnchor="end"
-                  height={60}
+                  height={70}
+                  interval={0}
                 />
                 <YAxis
                   tick={{ fill: "#94a3b8", fontSize: 12 }}
@@ -240,9 +233,13 @@ const Dashboard = () => {
                     borderRadius: "12px",
                     color: "#e2e8f0",
                   }}
+                  formatter={(value) => [value, "Quantity"]}
                 />
-                <Bar dataKey="qty" fill="#6366f1" radius={[6, 6, 0, 0]} name="Quantity" />
-                {/*<Bar dataKey="tons" fill="#8b5cf6" radius={[6, 6, 0, 0]} name="Tons" />*/}
+                <Bar dataKey="qty" radius={[6, 6, 0, 0]} name="Quantity">
+                  {locationData.map((_, i) => (
+                    <Cell key={i} fill={LOCATION_COLORS[i % LOCATION_COLORS.length]} />
+                  ))}
+                </Bar>
               </BarChart>
             </ResponsiveContainer>
           ) : (
@@ -260,9 +257,7 @@ const Dashboard = () => {
         transition={{ delay: 0.6 }}
         className="glass-card rounded-2xl p-6"
       >
-        <h3 className="text-lg font-semibold text-white mb-4">
-          Monthly Growth Trend
-        </h3>
+        <h3 className="text-lg font-semibold text-white mb-4">Monthly Growth Trend</h3>
         {monthlyData.length > 0 ? (
           <ResponsiveContainer width="100%" height={300}>
             <LineChart data={monthlyData}>
@@ -292,14 +287,6 @@ const Dashboard = () => {
                 dot={{ fill: "#6366f1", strokeWidth: 0, r: 4 }}
                 name="Quantity"
               />
-              {/* <Line
-                type="monotone"
-                dataKey="tons"
-                stroke="#10b981"
-                strokeWidth={2}
-                dot={{ fill: "#10b981", strokeWidth: 0, r: 4 }}
-                name="Tons"
-              /> */}
             </LineChart>
           </ResponsiveContainer>
         ) : (
