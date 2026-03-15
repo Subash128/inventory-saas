@@ -14,10 +14,6 @@ connectDB();
 
 const app = express();
 
-// Middleware
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-
 const allowedOrigins = [
   "http://localhost:5173",
   "http://localhost:3000",
@@ -33,7 +29,10 @@ app.use(
   })
 );
 
-app.options("*", cors());
+app.options(/.*/, cors());
+// Middleware
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
 app.use(helmet());
 app.use(morgan("dev"));
