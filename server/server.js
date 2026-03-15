@@ -40,6 +40,9 @@ app.use(
   })
 );
 
+// handle preflight requests
+app.options("*", cors());
+
 app.use(helmet());
 app.use(morgan("dev"));
 
