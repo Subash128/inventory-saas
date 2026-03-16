@@ -17,28 +17,40 @@ connectDB();
 
 const app = express();
 
-// Allowed Frontend Origins
-const allowedOrigins = [
-  "http://localhost:5173",
-  "http://localhost:3000",
-  "https://jhi-inventory.vercel.app",
-];
+export default {
+  async fetch(request, env) {
+    const origin = request.headers.get("Origin");
+    const allowedOrigins = [
+      "https://jhi-inventory.vercel.app",
+      "http://localhost:5173",
+      "http://localhost:3000",
+    ];
 
-// CORS Configuration
-const corsOptions = {
-  origin: function (origin, callback) {
-    // allow requests with no origin (mobile apps, curl)
-    if (!origin) return callback(null, true);
+    const corsHeaders = allowedOrigins.includes(origin)
+      ? {
+          "Access-Control-Allow-Origin": origin,
+          "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
+          "Access-Control-Allow-Headers": "Content-Type, Authorization",
+          "Access-Control-Allow-Credentials": "true",
+        }
+      : {};
 
-    if (allowedOrigins.includes(origin)) {
-      callback(null, true);
-    } else {
-      callback(new Error("CORS not allowed for this origin"));
+    // ✅ Handle preflight
+    if (request.method === "OPTIONS") {
+      return new Response(null, { status: 204, headers: corsHeaders });
     }
+
+    // Forward to your Express server
+    const response = await fetch(request);
+
+    // ✅ Inject CORS headers into the actual response too
+    const newResponse = new Response(response.body, response);
+    Object.entries(corsHeaders).forEach(([key, val]) =>
+      newResponse.headers.set(key, val)
+    );
+
+    return newResponse;
   },
-  credentials: true,
-  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-  allowedHeaders: ["Content-Type", "Authorization"],
 };
 
 // Middleware
