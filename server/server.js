@@ -37,7 +37,8 @@ const corsOptions = {
 
 // ✅ THEN use it in middleware
 app.use(cors(corsOptions));
-app.options("*", cors(corsOptions));
+// ✅ Express 5 wildcard syntax
+app.options("/{*path}", cors(corsOptions));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(helmet());
