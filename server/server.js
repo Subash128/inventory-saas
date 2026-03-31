@@ -14,33 +14,32 @@ connectDB();
 
 const app = express();
 
-// ✅ Define corsOptions FIRST
+// Middleware
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
 const allowedOrigins = [
   "http://localhost:5173",
   "http://localhost:3000",
   "https://jhi-inventory.vercel.app",
 ];
 
-const corsOptions = {
-  origin: function (origin, callback) {
-    if (!origin) return callback(null, true);
-    if (allowedOrigins.includes(origin)) {
-      callback(null, true);
-    } else {
-      callback(new Error("CORS not allowed for this origin"));
-    }
-  },
-  credentials: true,
-  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-  allowedHeaders: ["Content-Type", "Authorization"],
-};
+app.use(
+  cors({
+    origin: function (origin, callback) {
+      if (!origin) return callback(null, true);
 
-// ✅ THEN use it in middleware
-app.use(cors(corsOptions));
-// ✅ Express 5 wildcard syntax
-app.options("/{*path}", cors(corsOptions));
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+      if (allowedOrigins.indexOf(origin) === -1) {
+        const msg = "CORS policy does not allow this origin.";
+        return callback(new Error(msg), false);
+      }
+
+      return callback(null, true);
+    },
+    credentials: true,
+  })
+);
+
 app.use(helmet());
 app.use(morgan("dev"));
 
@@ -50,19 +49,21 @@ app.use("/api/inventory", inventoryRoutes);
 app.use("/api/analytics", analyticsRoutes);
 app.use("/api/export", exportRoutes);
 
+// Health check route
 app.get("/", (req, res) => {
   res.json({ message: "JHI Inventory Management API Running 🚀" });
 });
 
+// Global error handler
 app.use((err, req, res, next) => {
   console.error("❌ Error:", err.message);
   res.status(err.status || 500).json({
-    success: false,
     message: err.message || "Internal Server Error",
   });
 });
 
 const PORT = process.env.PORT || 5000;
+
 app.listen(PORT, () => {
   console.log(`🔥 Server running on port ${PORT}`);
 });
